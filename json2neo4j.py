@@ -13,6 +13,7 @@ docker run \
     neo4j:latest
     
 pip install neo4j
+python3 json2neo4j.py test.json
 """
 
 import json
@@ -62,7 +63,8 @@ def CreateNode(node_dict, name, query):
 if __name__ == '__main__':
     
     
-    jfile = sys.argn[1]
+    
+    jfile = open(sys.argv[1])
     text = json.load(jfile)
      
     nid = 0
@@ -72,8 +74,7 @@ if __name__ == '__main__':
     cypherexecuter(driver, cypher_query)
     
 
-
-jfile.close()
+    jfile.close()
 
 
 

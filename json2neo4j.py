@@ -1,4 +1,6 @@
 """
+# bash
+
 docker run \
     --name testneo4j \
     -p7474:7474 -p7687:7687 \
@@ -9,6 +11,8 @@ docker run \
     -v $HOME/neo4j/plugins:/plugins \
     --env NEO4J_AUTH=neo4j/test \
     neo4j:latest
+    
+pip install neo4j
 """
 
 import json
@@ -22,64 +26,48 @@ def cypherexecuter(driver, cypher):
     session.close()
 
 
-def CreateR(A, B, Relation):
-    cypher_R = ["(%s)-[:%s]->(%s)"%(A,Relation,b) for b in B]
-    cypher_R = "CREATE " + ','.join(cypher_R)
-    
+def CreateR(A, B, R, query):
+
+    if B == set([]): 
+        return ''
+    A = A.replace('-','_')
+    for b in B:
+        cypher_R = "(%s)-[:%s]->(%s)"%(A,R,b.replace('-','_'))
+        query.append(cypher_R)
+        
     return cypher_R
     
 
-def CreatNode(node_dict, name):
-    type_ = node_dict['type'] 
+def CreateNode(node_dict, name, query):
+    name = name.replace('-','_')
+    type_ = node_dict['type'].replace('-','_')
     mac = node_dict['mac'] 
-    ip = node_dict['ip'] 
-    ports = node_dict['ports']
+    ip = node_dict['ip']
+    ports = node_dict.get('ports', []) + node_dict.get('port', [])
     
+    cypher_create = "(%s: %s { name: '%s', type: '%s', mac: '%s', ip: '%s', ports: %s})" %(name, type_, name, type_, mac, ip, ports)
+    query.append(cypher_create)
     
-    cypher_create = "CREATE (%s: %s { type: '%s', mac: '%s', ip: '%s', port: %s})" %(name, type_, type_, mac, ip, ports)
+    subnets = set(node_dict.keys()) - set(['ip', 'mac', 'ports', 'type', 'port'])
+    for subnet in subnets:
+        print(subnet)
+        CreateNode(node_dict[subnet], subnet, query)
+            
+    CreateR(name, subnets, 'subnet', query)
     
-    subnets = []
-    for subnet in node_dict.keys():
-        subnets.append(subnet)
-
-    cypher_R = CreateR(name, subnets, node_dict[subnet]['ip'])
-    
-    return cypher_create, cypher_R
+    return query
 
 
 if __name__ == '__main__':
     jfile = open('test.json')
     text = json.load(jfile)
      
-    
+    nid = 0
     driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "test"))
+    cypher_query = CreateNode(text, 'init', [])
+    cypher_query = 'CREATE '+','.join(cypher_query)
+    cypherexecuter(driver, cypher_query)
     
-
-"""
-def add_friend(tx, name, friend_name):
-    tx.run("MERGE (a:Person {name: $name}) "
-           "MERGE (a)-[:KNOWS]->(friend:Person {name: $friend_name})",
-           name=name, friend_name=friend_name)
-
-def print_friends(tx, name):
-    for record in tx.run("MATCH (a:Person)-[:KNOWS]->(friend) WHERE a.name = $name "
-                         "RETURN friend.name ORDER BY friend.name", name=name):
-        print(record["friend.name"])
-        
-        
-
-with driver.session() as session:
-    session.write_transaction(add_friend, "Arthur", "Guinevere")
-    session.write_transaction(add_friend, "Arthur", "Lancelot")
-    session.write_transaction(add_friend, "Arthur", "Merlin")
-    session.read_transaction(print_friends, "Arthur")
-    
-"""  
-    
-    
-    
-    
-
 
 
 jfile.close()

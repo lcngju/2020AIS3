@@ -16,6 +16,7 @@ pip install neo4j
 """
 
 import json
+import sys
 from neo4j import GraphDatabase
 
 def cypherexecuter(driver, cypher):
@@ -59,7 +60,9 @@ def CreateNode(node_dict, name, query):
 
 
 if __name__ == '__main__':
-    jfile = open('test.json')
+    
+    
+    jfile = sys.argn[1]
     text = json.load(jfile)
      
     nid = 0
